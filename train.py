@@ -4,6 +4,7 @@ import argparse
 import logging
 from tqdm import tqdm
 from dataclasses import asdict
+import json
 
 from metrics import (
     calculate_similarity_metrics,
@@ -23,7 +24,7 @@ from utils import (
 )
 from config import get_config
 from sae import Autoencoder, MatryoshkaAutoencoder, AdaptiveSoftTopK
-from loss import SAELoss
+from loss import SAELoss, dcor_reconstruction_loss, dcor_latent_loss
 
 """
 Sparse Autoencoder (SAE) Training Script
@@ -425,9 +426,19 @@ def main(args):
     numb_of_dead_neurons = 0
     dead_neurons = []
 
+    dcors = {
+        "latent": [],
+        "recon": []
+    }
+
     for epoch in range(cfg.training.epochs):
         model.train()
         logger.info(f"Epoch {epoch+1}/{cfg.training.epochs}")
+
+        dcors_epoch = {
+            "latent": [],
+            "recon": []
+        }
 
         # Training loop for current epoch
         for step, embeddings in enumerate(tqdm(train_loader, desc="Training")):
@@ -468,10 +479,6 @@ def main(args):
 
             # Backpropagation
             loss.backward()
-
-            for n,p in model.named_parameters():
-                if p.grad is not None and torch.isnan(p.grad).any():
-                    print("NaN in grad:", n)
 
             # Weight normalization and gradient projection
             model.scale_to_unit_norm()
@@ -518,6 +525,10 @@ def main(args):
             # Representation Metrics
             repr_norm = repr_all.norm(dim=-1).mean().item()
             repr_max = repr_all.max(dim=-1).values.mean().item()
+
+            with torch.no_grad():
+                dcors_epoch['latent'].append(dcor_latent_loss(repr_all).item())
+                dcors_epoch['recon'].append(dcor_reconstruction_loss(repr_all, model.decode).item())
 
             # Check for dead neurons periodically
             if global_step % cfg.training.check_dead == 0:
@@ -571,6 +582,10 @@ def main(args):
         if args.dataset_second_modality is not None:
             # Evaluate on the second modality dataset
             eval(model, eval_loader_second, loss_fn, device, cfg)
+        
+
+        dcors["latent"].append(dcors_epoch['latent'])
+        dcors["recon"].append(dcors_epoch['recon'])
 
     # Save the trained model
     # For Matryoshka models, append the first nesting level to activation name
@@ -604,6 +619,10 @@ def main(args):
     )
 
     logger.info(f"Model saved to {save_path}")
+
+
+    with open("logs/pure_topk.json", "w") as f:
+        json.dump(dcors, f)
 
 
 if __name__ == "__main__":

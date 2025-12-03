@@ -313,29 +313,31 @@ def distance_correlation(x, y, eps=1e-8):
 
     # Distance correlation
     dcor = dcov_xy / torch.sqrt(torch.clamp(dcov_xx * dcov_yy, min=eps))
-    print(dcor)
     return dcor
 
 
-def dcor_reconstruction(
-    latent_activations: torch.Tensor, decoder, k=None
-):
-    nonzero_cols = (latent_activations != 0).any(dim=0).nonzero(as_tuple=True)[0]
-    d = len(nonzero_cols)
-    i, j = nonzero_cols[torch.randperm(d)[:2]]
+def dcor_reconstruction_loss(latent_activations: torch.Tensor, decoder, k=8):
+    B, d = latent_activations.shape
 
-    concept1 = torch.zeros_like(latent_activations)
-    concept1[:, i] = latent_activations[:, i]
+    most_active = latent_activations.mean(dim=0).topk(k).indices
 
-    concept2 = torch.zeros_like(latent_activations)
-    concept2[:, j] = latent_activations[:, j]
+    expanded = latent_activations.unsqueeze(0).expand(k, B, d)
+    mask = torch.zeros(k, d, device=latent_activations.device)
+    mask[torch.arange(k), most_active] = True
+    mask = mask.unsqueeze(1)
 
-    dec1 = decoder(concept1)
-    dec2 = decoder(concept2)
+    isolated_concepts = (expanded * mask).reshape(k*B, d)
 
+    decoder_output = decoder(isolated_concepts)
+    reconstructions = torch.split(decoder_output, B, dim=0)
+    
+    dcors = []
+    for i in range(k):
+        for j in range(i+1, k):
+            dcors.append(distance_correlation(reconstructions[i], reconstructions[j]))
 
-    dcor =  distance_correlation(dec1 / dec1.norm(), dec2 / dec2.norm())
-    return dcor
+    dcor_loss = torch.stack(dcors).mean()
+    return dcor_loss
 
 
 # Mapping of reconstruction loss function names to their implementations
@@ -354,7 +356,7 @@ SPARSITY_LOSSES_MAP = {
 
 INDEPENDENCE_LOSSES_MAP = {
     "DcorLatent": dcor_latent_loss,
-    "DcorRecon": dcor_reconstruction,
+    "DcorRecon": dcor_reconstruction_loss,
 }
 
 
