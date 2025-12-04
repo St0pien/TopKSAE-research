@@ -529,9 +529,10 @@ def main(args):
             repr_norm = repr_all.norm(dim=-1).mean().item()
             repr_max = repr_all.max(dim=-1).values.mean().item()
 
-            with torch.no_grad():
-                dcors_epoch['latent'].append(dcor_latent_loss(repr_all).item())
-                dcors_epoch['recon'].append(dcor_reconstruction_loss(repr_all, model.decode).item())
+            if args.dcor is not None:
+                with torch.no_grad():
+                    dcors_epoch['latent'].append(dcor_latent_loss(repr_all).item())
+                    dcors_epoch['recon'].append(dcor_reconstruction_loss(repr_all, model.decode).item())
 
             # Check for dead neurons periodically
             if global_step % cfg.training.check_dead == 0:
