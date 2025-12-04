@@ -219,7 +219,7 @@ def normalized_L1_loss(
     return (latent_activations.abs().sum(dim=-1) / original_input.norm(dim=-1)).mean()
 
 
-def dcor_latent_loss(latent_activations: torch.Tensor, decoder=None, k=16):
+def dcor_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8):
     """
     Compute distance correlation between latent dimmensions and average them
 
@@ -316,7 +316,7 @@ def distance_correlation(x, y, eps=1e-8):
     return dcor
 
 
-def dcor_reconstruction_loss(latent_activations: torch.Tensor, decoder, k=8):
+def dcor_reconstruction_loss(latent_activations: torch.Tensor, decoder, k=4):
     B, d = latent_activations.shape
 
     most_active = latent_activations.mean(dim=0).topk(k).indices

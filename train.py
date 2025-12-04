@@ -5,6 +5,7 @@ import logging
 from tqdm import tqdm
 from dataclasses import asdict
 import json
+from pathlib import Path
 
 from metrics import (
     calculate_similarity_metrics,
@@ -114,6 +115,8 @@ def parse_args() -> argparse.Namespace:
         default=1.0,
         help="Ratio of latent dimensions to input dimensions",
     )
+
+    parser.add_argument("--dcor", default=None, help="Path to save dcor reports")
 
     return parser.parse_args()
 
@@ -621,8 +624,11 @@ def main(args):
     logger.info(f"Model saved to {save_path}")
 
 
-    with open("logs/pure_topk.json", "w") as f:
-        json.dump(dcors, f)
+    if args.dcor is not None:
+        dcor_path = Path(args.dcor)
+        dcor_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(dcor_path, "w") as f:
+            json.dump(dcors, f)
 
 
 if __name__ == "__main__":
