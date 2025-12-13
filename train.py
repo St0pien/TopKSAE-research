@@ -25,7 +25,7 @@ from utils import (
 )
 from config import get_config
 from sae import Autoencoder, MatryoshkaAutoencoder, AdaptiveSoftTopK
-from loss import SAELoss, dcor_reconstruction_loss, dcor_latent_loss
+from loss import SAELoss, dcor_top_recon_loss, dcor_top_latent_loss, dcor_random_latent_loss, dcor_random_recon_loss
 
 """
 Sparse Autoencoder (SAE) Training Script
@@ -90,8 +90,10 @@ def parse_args() -> argparse.Namespace:
         choices=[
             "ReLUSAE",
             "TopKSAE",
-            "TopKDcorLatentSAE",
-            "TopKDcorReconSAE",
+            "DcorTopLatentSAE",
+            "DcorRandomLatentSAE",
+            "DcorTopReconSAE",
+            "DcorRandomReconSAE",
             "BatchTopKSAE",
             "MSAE_UW",
             "MSAE_RW",
@@ -430,8 +432,10 @@ def main(args):
     dead_neurons = []
 
     dcors = {
-        "latent": [],
-        "recon": []
+        "top_latent": [],
+        "random_latent": [],
+        "top_recon": [],
+        "random_recon": []
     }
 
     for epoch in range(cfg.training.epochs):
@@ -439,8 +443,10 @@ def main(args):
         logger.info(f"Epoch {epoch+1}/{cfg.training.epochs}")
 
         dcors_epoch = {
-            "latent": [],
-            "recon": []
+            "top_latent": [],
+            "random_latent": [],
+            "top_recon": [],
+            "random_recon": []
         }
 
         # Training loop for current epoch
@@ -531,8 +537,10 @@ def main(args):
 
             if args.dcor is not None:
                 with torch.no_grad():
-                    dcors_epoch['latent'].append(dcor_latent_loss(repr_all).item())
-                    dcors_epoch['recon'].append(dcor_reconstruction_loss(repr_all, model.decode).item())
+                    dcors_epoch['top_latent'].append(dcor_top_latent_loss(repr_all).item())
+                    dcors_epoch['random_latent'].append(dcor_random_latent_loss(repr_all).item())
+                    dcors_epoch['top_recon'].append(dcor_top_recon_loss(repr_all, model.decode).item())
+                    dcors_epoch['random_recon'].append(dcor_random_latent_loss(repr_all, model.decode).item())
 
             # Check for dead neurons periodically
             if global_step % cfg.training.check_dead == 0:
@@ -588,8 +596,10 @@ def main(args):
             eval(model, eval_loader_second, loss_fn, device, cfg)
         
 
-        dcors["latent"].append(dcors_epoch['latent'])
-        dcors["recon"].append(dcors_epoch['recon'])
+        dcors['top_latent'].append(dcors_epoch['top_latent'])
+        dcors['random_latent'].append(dcors_epoch['random_latent'])
+        dcors['top_recon'].append(dcors_epoch['top_recon'])
+        dcors['random_recon'].append(dcors_epoch['random_recon'])
 
     # Save the trained model
     # For Matryoshka models, append the first nesting level to activation name

@@ -140,17 +140,17 @@ class TopKSAEConfig:
     loss: LossConfig = field(default_factory=default_topksae_loss)
     model: ModelConfig = field(default_factory=default_topksae_model)
 
-def default_topkdcor_latent_sae_training() -> TrainConfig:
+def default_dcor_top_latent_sae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
 
-def default_topkdcor_latent_sae_loss() -> LossConfig:
-    return LossConfig(sparse_weight=0.0, independence_loss="DcorLatent", independence_weight=1.0)
+def default_dcor_top_latent_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="DcorTopLatent", independence_weight=1.0)
 
-def default_topkdcor_latent_sae_model() -> ModelConfig:
+def default_dcor_top_latent_sae_model() -> ModelConfig:
     return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
 
 @dataclasses.dataclass
-class TopKDcorLatentSAEConfig:
+class DcorTopLatentSAEConfig:
     """
     Configuration for Top-K-Dcor Sparse Autoencoder.
     
@@ -159,32 +159,55 @@ class TopKDcorLatentSAEConfig:
     rather than through a loss term. Uses a higher learning rate (5e-4) and no explicit
     sparsity weight. Additionaly uses distance correlation loss term to enforce independence of concepts in latent space
     """
-    training: TrainConfig = field(default_factory=default_topkdcor_latent_sae_training)
-    loss: LossConfig = field(default_factory=default_topkdcor_latent_sae_loss)
-    model: ModelConfig = field(default_factory=default_topkdcor_latent_sae_model)
+    training: TrainConfig = field(default_factory=default_dcor_top_latent_sae_training)
+    loss: LossConfig = field(default_factory=default_dcor_top_latent_sae_loss)
+    model: ModelConfig = field(default_factory=default_dcor_top_latent_sae_model)
 
-def default_topkdcor_recon_sae_training() -> TrainConfig:
+
+def default_dcor_random_latent_sae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
 
-def default_topkdcor_recon_sae_loss() -> LossConfig:
-    return LossConfig(sparse_weight=0.0, independence_loss="DcorRecon", independence_weight=1.0)
+def default_dcor_random_latent_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="DcorRandomLatent", independence_weight=1.0)
 
-def default_topkdcor_recon_sae_model() -> ModelConfig:
+def default_dcor_random_latent_sae_model() -> ModelConfig:
     return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
 
 @dataclasses.dataclass
-class TopKDcorReconSAEConfig:
-    """
-    Configuration for Top-K-Dcor Sparse Autoencoder.
-    
-    This configuration uses TopKReLU_64 activation which only keeps the top 64 activations
-    and zeros out the rest, enforcing sparsity directly within the activation function
-    rather than through a loss term. Uses a higher learning rate (5e-4) and no explicit
-    sparsity weight. Additionaly uses distance correlation loss term to enforce independence of concepts in latent space
-    """
-    training: TrainConfig = field(default_factory=default_topkdcor_recon_sae_training)
-    loss: LossConfig = field(default_factory=default_topkdcor_recon_sae_loss)
-    model: ModelConfig = field(default_factory=default_topkdcor_recon_sae_model)
+class DcorRandomLatentSAEConfig:
+    training: TrainConfig = field(default_factory=default_dcor_random_latent_sae_training)
+    loss: LossConfig = field(default_factory=default_dcor_random_latent_sae_loss)
+    model: ModelConfig = field(default_factory=default_dcor_random_latent_sae_model)
+
+def default_dcor_top_recon_sae_training() -> TrainConfig:
+    return TrainConfig(lr=5e-4)
+
+def default_dcor_top_recon_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="DcorTopRecon", independence_weight=1.0)
+
+def default_dcor_top_recon_sae_model() -> ModelConfig:
+    return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
+
+@dataclasses.dataclass
+class DcorTopReconSAEConfig:
+    training: TrainConfig = field(default_factory=default_dcor_top_recon_sae_training)
+    loss: LossConfig = field(default_factory=default_dcor_top_recon_sae_loss)
+    model: ModelConfig = field(default_factory=default_dcor_top_recon_sae_model)
+
+def default_dcor_random_recon_sae_training() -> TrainConfig:
+    return TrainConfig(lr=5e-4)
+
+def default_dcor_random_recon_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="DcorRandomRecon", independence_weight=1.0)
+
+def default_dcor_random_recon_sae_model() -> ModelConfig:
+    return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
+
+@dataclasses.dataclass
+class DcorRandomReconSAEConfig:
+    training: TrainConfig = field(default_factory=default_dcor_random_recon_sae_training)
+    loss: LossConfig = field(default_factory=default_dcor_random_recon_sae_loss)
+    model: ModelConfig = field(default_factory=default_dcor_random_recon_sae_model)
 
 def default_batchtopksae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
@@ -281,10 +304,14 @@ def get_config(model_name: str):
         return ReLUSAEConfig()
     elif model_name == "TopKSAE":
         return TopKSAEConfig()
-    elif model_name == "TopKDcorLatentSAE":
-        return TopKDcorLatentSAEConfig()
-    elif model_name == "TopKDcorReconSAE":
-        return TopKDcorReconSAEConfig()
+    elif model_name == "DcorTopLatentSAE":
+        return DcorTopLatentSAEConfig()
+    elif model_name == "DcorRandomLatentSAE":
+        return DcorRandomLatentSAEConfig()
+    elif model_name == "DcorTopReconSAE":
+        return DcorTopReconSAEConfig()
+    elif model_name == "DcorRandomReconSAE":
+        return DcorRandomReconSAEConfig()
     elif model_name == "BatchTopKSAE":
         return BatchTopKSAEConfig()
     elif model_name == "MSAE_UW":
