@@ -483,8 +483,6 @@ class Autoencoder(nn.Module):
         self.pre_bias = nn.Parameter(torch.full((n_inputs,), bias_init) if isinstance(bias_init, float) else bias_init)
         self.encoder = nn.Parameter(torch.zeros((n_inputs, n_latents)))
         self.latent_bias = nn.Parameter(torch.zeros(n_latents,))
-
-        self.batch_norm = nn.BatchNorm1d(n_latents)
         
         # For tied weights, decoder is derived from encoder
         if tied:
@@ -678,12 +676,11 @@ class Autoencoder(nn.Module):
         """
         x, info = self.preprocess(x)
         pre_encoded = self.encode_pre_act(x)
-        pre_encoded_norm = self.batch_norm(pre_encoded)
-        encoded = self.activation(pre_encoded_norm)
+        encoded = self.activation(pre_encoded)
         
         # Get full activations (for analysis) depending on activation type
         if isinstance(self.activation, TopK):
-            full_encoded = self.activation.forward_eval(pre_encoded_norm)
+            full_encoded = self.activation.forward_eval(pre_encoded)
         else:
             full_encoded = torch.clone(encoded)
         
@@ -755,7 +752,7 @@ class Autoencoder(nn.Module):
         
         # Compute pre-activations
         latents_pre_act = self.encode_pre_act(x_processed)
-        
+
         # Apply activation function
         latents = self.activation(latents_pre_act)
         latents_caped = self.latent_soft_cap(latents)
