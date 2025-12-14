@@ -229,10 +229,17 @@ def dcor_top_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8):
 
 
 def dcor_random_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8):
-    random_indexes = torch.randperm(latent_activations.shape[1])[:k]
-    rand_neurons = latent_activations[:, random_indexes]
+    col_mask = torch.any(latent_activations != 0, dim=0)
+    alive_neurons = latent_activations[:, col_mask]
 
-    return single_dim_cross_dcor(rand_neurons)
+    random_indexes = torch.randperm(alive_neurons.shape[1])[:k]
+    rand_neurons = alive_neurons[:, random_indexes]
+
+    loss = single_dim_cross_dcor(rand_neurons)
+    
+    if loss < 0:
+        return torch.tensor([0], device=latent_activations.device)
+    return loss
 
 
 def dcor_recon(latent_activations: torch.Tensor, indices, decoder):
