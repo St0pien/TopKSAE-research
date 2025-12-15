@@ -13,7 +13,7 @@ from metrics import (
     l0_messure,
     cknna
 )
-from loss import dcor_latent_loss, dcor_reconstruction_loss
+from loss import dcor_top_latent_loss, dcor_top_recon_loss
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,8 +137,8 @@ def get_representation(model, dataset, repr_file_name, batch_size):
             cs.append(torch.nn.functional.cosine_similarity(batch, outputs))
             l0.append(l0_messure(representations))
             with torch.no_grad():
-                dcor_latent.append(dcor_latent_loss(sparse_representation).item())
-                dcor_recon.append(dcor_reconstruction_loss(sparse_representation, model.decode).item())
+                dcor_latent.append(dcor_top_latent_loss(sparse_representation).item())
+                dcor_recon.append(dcor_top_recon_loss(sparse_representation, model.decode).item())
             # Only calculate the cknna if it even to the number of the batch
             if batch.shape[0] == batch_size:
                 cknnas.append(cknna(batch, representations, topk=10))

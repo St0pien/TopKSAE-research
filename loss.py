@@ -236,10 +236,29 @@ def dcor_random_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8)
     rand_neurons = alive_neurons[:, random_indexes]
 
     loss = single_dim_cross_dcor(rand_neurons)
-    
+
     if loss < 0:
         return torch.tensor([0], device=latent_activations.device)
     return loss
+
+
+def dcor_full_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8):
+    d = latent_activations.shape[1]
+    scrambled_columns = latent_activations[:, torch.randperm(d)]
+
+    running_avg = 0
+    steps = 0
+    for i in range(d // k):
+        chunk = scrambled_columns[:, i : i + k]
+        chunk_nonzero_rows = chunk[torch.any(chunk != 0, dim=-1)]
+        chunk_nonzero_rows_cols = chunk_nonzero_rows[
+            :, torch.any(chunk_nonzero_rows != 0, dim=0)
+        ]
+
+        running_avg += single_dim_cross_dcor(chunk_nonzero_rows_cols)
+        steps += 1
+
+    return running_avg / steps
 
 
 def dcor_recon(latent_activations: torch.Tensor, indices, decoder):
@@ -263,6 +282,7 @@ def dcor_recon(latent_activations: torch.Tensor, indices, decoder):
     dcor_loss = torch.stack(dcors).mean()
     return dcor_loss
 
+
 def dcor_top_recon_loss(latent_activations: torch.Tensor, decoder, k=4):
     most_active = latent_activations.mean(dim=0).topk(k).indices
 
@@ -272,7 +292,20 @@ def dcor_top_recon_loss(latent_activations: torch.Tensor, decoder, k=4):
 def dcor_random_recon_loss(latent_activations: torch.Tensor, decoder, k=4):
     random_columns = torch.randperm(latent_activations.shape[1])[:k]
     return dcor_recon(latent_activations, random_columns, decoder)
-    
+
+
+def dcor_full_recon_loss(latent_activations: torch.Tensor, decoder, k=4):
+    d = latent_activations.shape[1]
+    perm = torch.randperm(d)
+
+    running_avg = 0
+    steps = 0
+    for i in range(d // k):
+        rand_indices = perm[i : i + k]
+        running_avg += dcor_recon(latent_activations, rand_indices, decoder)
+        steps += 1
+
+    return running_avg / steps
 
 
 # Mapping of reconstruction loss function names to their implementations
@@ -292,8 +325,10 @@ SPARSITY_LOSSES_MAP = {
 INDEPENDENCE_LOSSES_MAP = {
     "DcorTopLatent": dcor_top_latent_loss,
     "DcorRandomLatent": dcor_random_latent_loss,
+    "DcorFullLatent": dcor_full_latent_loss,
     "DcorTopRecon": dcor_top_recon_loss,
     "DcorRandomRecon": dcor_random_recon_loss,
+    "DcorFullRecon": dcor_full_recon_loss,
 }
 
 

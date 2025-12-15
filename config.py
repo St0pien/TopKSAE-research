@@ -179,6 +179,21 @@ class DcorRandomLatentSAEConfig:
     loss: LossConfig = field(default_factory=default_dcor_random_latent_sae_loss)
     model: ModelConfig = field(default_factory=default_dcor_random_latent_sae_model)
 
+def default_dcor_full_latent_sae_training() -> TrainConfig:
+    return TrainConfig(lr=5e-4)
+
+def default_dcor_full_latent_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="DcorFullLatent", independence_weight=1.0)
+
+def default_dcor_full_latent_sae_model() -> ModelConfig:
+    return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
+
+@dataclasses.dataclass
+class DcorFullLatentSAEConfig:
+    training: TrainConfig = field(default_factory=default_dcor_full_latent_sae_training)
+    loss: LossConfig = field(default_factory=default_dcor_full_latent_sae_loss)
+    model: ModelConfig = field(default_factory=default_dcor_full_latent_sae_model)
+
 def default_dcor_top_recon_sae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
 
@@ -208,6 +223,22 @@ class DcorRandomReconSAEConfig:
     training: TrainConfig = field(default_factory=default_dcor_random_recon_sae_training)
     loss: LossConfig = field(default_factory=default_dcor_random_recon_sae_loss)
     model: ModelConfig = field(default_factory=default_dcor_random_recon_sae_model)
+
+
+def default_dcor_full_recon_sae_training() -> TrainConfig:
+    return TrainConfig(lr=5e-4)
+
+def default_dcor_full_recon_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="DcorFullRecon", independence_weight=1.0)
+
+def default_dcor_full_recon_sae_model() -> ModelConfig:
+    return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
+
+@dataclasses.dataclass
+class DcorFullReconSAEConfig:
+    training: TrainConfig = field(default_factory=default_dcor_full_recon_sae_training)
+    loss: LossConfig = field(default_factory=default_dcor_full_recon_sae_loss)
+    model: ModelConfig = field(default_factory=default_dcor_full_recon_sae_model)
 
 def default_batchtopksae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
@@ -308,10 +339,14 @@ def get_config(model_name: str):
         return DcorTopLatentSAEConfig()
     elif model_name == "DcorRandomLatentSAE":
         return DcorRandomLatentSAEConfig()
+    elif model_name == "DcorFullLatentSAE":
+        return DcorFullLatentSAEConfig()
     elif model_name == "DcorTopReconSAE":
         return DcorTopReconSAEConfig()
     elif model_name == "DcorRandomReconSAE":
         return DcorRandomReconSAEConfig()
+    elif model_name == "DcorFullReconSAE":
+        return DcorFullReconSAEConfig()
     elif model_name == "BatchTopKSAE":
         return BatchTopKSAEConfig()
     elif model_name == "MSAE_UW":
