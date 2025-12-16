@@ -88,7 +88,7 @@ def get_distance_correlations(
             B, D = sparse_repr.shape
 
             dcor = single_dim_cross_dcor(sparse_repr)
-            sample_distcorrs = dcor
+            sample_distcorrs.append(dcor)
 
     distcorrs = np.array(sample_distcorrs.cpu())
 
