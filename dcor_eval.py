@@ -90,7 +90,7 @@ def get_distance_correlations(
             dcor = single_dim_cross_dcor(sparse_repr)
             sample_distcorrs = dcor
 
-    distcorrs = np.array(sample_distcorrs)
+    distcorrs = np.array(sample_distcorrs.cpu())
 
     min_idx = distcorrs.argmin()
     max_idx = distcorrs.argmax()
