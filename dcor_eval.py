@@ -85,12 +85,11 @@ def get_distance_correlations(
 
             # Encode
             sparse_repr = model(batch)[1]  # (B, D)
-            B, D = sparse_repr.shape
 
             dcor = single_dim_cross_dcor(sparse_repr)
-            sample_distcorrs.append(dcor)
+            sample_distcorrs.append(dcor.item())
 
-    distcorrs = np.array(sample_distcorrs.cpu())
+    distcorrs = np.array(sample_distcorrs)
 
     min_idx = distcorrs.argmin()
     max_idx = distcorrs.argmax()
