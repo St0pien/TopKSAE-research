@@ -242,7 +242,7 @@ def dcor_random_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8)
     return loss
 
 
-def dcor_full_latent_loss(latent_activations: torch.Tensor, decoder=None, k=8):
+def dcor_full_latent_loss(latent_activations: torch.Tensor, decoder=None, k=4):
     d = latent_activations.shape[1]
     scrambled_columns = latent_activations[:, torch.randperm(d)]
 
@@ -308,6 +308,27 @@ def dcor_full_recon_loss(latent_activations: torch.Tensor, decoder, k=4):
     return running_avg / steps
 
 
+def ort_loss(latent_activations, decoder, k=8):
+    idt = torch.eye(latent_activations.shape[1], device=latent_activations.device)
+
+    features = decoder(idt)
+    
+    W_dec = features.T
+    D, N = W_dec.shape
+    group_count = D // k
+    group_size = k
+    assert D == group_count * group_size, "D must be divisible by group_count"
+    permuted_indices = torch.randperm(D, device=W_dec.device)
+    shuffled_W_dec = W_dec[permuted_indices]
+    grouped_W = shuffled_W_dec.view(group_count, group_size, N).contiguous()
+    cos_sims = torch.bmm(grouped_W, grouped_W.transpose(1, 2))
+    eye = torch.eye(group_size, device=cos_sims.device).bool()
+    cos_sims.masked_fill_(eye.unsqueeze(0), 0.0)
+    max_values = cos_sims.max(dim=2).values  
+    ort_loss = max_values.pow(2).mean()
+    return ort_loss 
+
+
 # Mapping of reconstruction loss function names to their implementations
 RECON_LOSSES_MAP = {
     "mse": mean_squared_error,
@@ -329,6 +350,7 @@ INDEPENDENCE_LOSSES_MAP = {
     "DcorTopRecon": dcor_top_recon_loss,
     "DcorRandomRecon": dcor_random_recon_loss,
     "DcorFullRecon": dcor_full_recon_loss,
+    "Ort": ort_loss,
 }
 
 

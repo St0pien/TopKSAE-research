@@ -240,6 +240,22 @@ class DcorFullReconSAEConfig:
     loss: LossConfig = field(default_factory=default_dcor_full_recon_sae_loss)
     model: ModelConfig = field(default_factory=default_dcor_full_recon_sae_model)
 
+def default_ort_sae_training() -> TrainConfig:
+    return TrainConfig(lr=5e-4)
+
+def default_ort_sae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=0.0, independence_loss="Ort", independence_weight=1.0)
+
+def default_ort_sae_model() -> ModelConfig:
+    return ModelConfig(use_matryoshka=False, activation="TopKReLU_64")
+
+@dataclasses.dataclass
+class OrtSAEConfig:
+    training: TrainConfig = field(default_factory=default_ort_sae_training)
+    loss: LossConfig = field(default_factory=default_ort_sae_loss)
+    model: ModelConfig = field(default_factory=default_ort_sae_model)
+
+
 def default_batchtopksae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
 
@@ -347,6 +363,8 @@ def get_config(model_name: str):
         return DcorRandomReconSAEConfig()
     elif model_name == "DcorFullReconSAE":
         return DcorFullReconSAEConfig()
+    elif model_name == "OrtSAE":
+        return OrtSAEConfig()
     elif model_name == "BatchTopKSAE":
         return BatchTopKSAEConfig()
     elif model_name == "MSAE_UW":

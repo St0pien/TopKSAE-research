@@ -96,6 +96,7 @@ def parse_args() -> argparse.Namespace:
             "DcorTopReconSAE",
             "DcorRandomReconSAE",
             "DcorFullReconSAE",
+            "OrtSAE",
             "BatchTopKSAE",
             "MSAE_UW",
             "MSAE_RW",
