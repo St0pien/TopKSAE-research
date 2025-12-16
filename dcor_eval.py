@@ -74,19 +74,21 @@ def get_distance_correlations(
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
+        shuffle=True
     )
 
     sample_distcorrs = []
 
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Calculating distance correlation"):
-            batch = batch.to(device, non_blocking=True)
+            batch = batch.to(device)
 
             # Encode
             sparse_repr = model(batch)[1]  # (B, D)
             B, D = sparse_repr.shape
 
             dcor = single_dim_cross_dcor(sparse_repr)
+            sample_distcorrs = dcor
 
     distcorrs = np.array(sample_distcorrs)
 
