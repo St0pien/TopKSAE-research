@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 
 from utils import normalize_data, JumpReLUFunction, StepFunction
+from func import SoftTopK
 
 """
 Sparse Autoencoder (SAE) Implementation
@@ -184,6 +185,17 @@ class BatchTopK(TopK):
         return x
 
 
+class AdaptiveSoftTopK(nn.Module):
+    def __init__(self, k=64):
+        super().__init__()
+        self.k = k
+    
+    def forward(self, x: torch.Tensor):
+        k = torch.full((x.shape[0],), self.k, dtype=torch.long, device=x.device)
+        weights = SoftTopK.apply(x, k, 0.05, False)
+        return x * weights
+
+
 class JumpReLU(nn.Module):
     """
     JumpReLU activation with learned thresholds.
@@ -254,6 +266,7 @@ ACTIVATIONS_CLASSES = {
     "BatchTopKReLU": partial(BatchTopK, act_fn=nn.ReLU()),
     "BatchTopKabs": partial(BatchTopK, use_abs=True, act_fn=nn.Identity()),
     "BatchTopKabsReLU": partial(BatchTopK, use_abs=True, act_fn=nn.ReLU()),
+    "AdaptiveSoftTopK": AdaptiveSoftTopK,
 }
 
 
