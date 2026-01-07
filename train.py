@@ -80,6 +80,7 @@ def eval(model, eval_loader, loss_fn, device, cfg):
     od_sum = 0.0
     sparsity_sparse_sum = 0.0
     sparsity_all_sum = 0.0
+    mean_k_sum = 0.0
     
     # Switch to evaluation mode
     model.eval()
@@ -90,6 +91,8 @@ def eval(model, eval_loader, loss_fn, device, cfg):
         with torch.no_grad():
             recons_sparse, repr_sparse, recons_all, repr_all = model(embeddings)
             loss, recon_loss, sparse_loss = loss_fn(recons_all, embeddings, repr_all)
+
+            mean_k_sum += repr_all.count_nonzero(dim=1).mean(dtype=torch.float32).item()
         
         if cfg.model.use_matryoshka:
             recons_sparse = recons_sparse[0]
@@ -137,6 +140,7 @@ def eval(model, eval_loader, loss_fn, device, cfg):
     logger.info(f"  Sparsity Sparse: {sparsity_sparse_sum / len(eval_loader):.4f}")
     logger.info(f"  Sparsity All: {sparsity_all_sum / len(eval_loader):.4f}")
     logger.info(f"  Orthogonal Decoder Loss: {od_sum / len(eval_loader):.6f}")
+    logger.info(f"  Mean K: {mean_k_sum / len(eval_loader):.6f}")
 
 def main(args):
     """

@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from utils import normalize_data, JumpReLUFunction, StepFunction
-from func import SoftTopK
+from func import SoftTopK, topk_per_row
 
 """
 Sparse Autoencoder (SAE) Implementation
@@ -186,14 +186,29 @@ class BatchTopK(TopK):
 
 
 class AdaptiveSoftTopK(nn.Module):
-    def __init__(self, k=64):
+    def __init__(self, n_inputs, act_fn: Callable = nn.ReLU(), k=64):
         super().__init__()
+        self.input_dim = n_inputs
         self.k = k
+        self.k_estim = nn.Sequential(
+            nn.Linear(self.input_dim, 1),
+            nn.BatchNorm1d(1),
+            nn.Sigmoid()
+        )     
+        self.act_fn = act_fn
+
+    def forward(self, latent: torch.Tensor, embed: torch.Tensor):
+        estimated_k = (self.k_estim(embed) * self.k)[:, 0]
+        weights = SoftTopK.apply(latent, estimated_k, 0.001, False, True)
+        if torch.isnan(weights).any():
+            raise Exception("Numerical error")
+        ret = self.act_fn(latent * weights)
+        return ret
     
-    def forward(self, x: torch.Tensor):
-        k = torch.full((x.shape[0],), self.k, dtype=torch.long, device=x.device)
-        weights = SoftTopK.apply(x, k, 0.05, False)
-        return x * weights
+    def forward_eval(self, latent: torch.Tensor, embed: torch.Tensor):
+        estimated_k = (self.k_estim(embed) * self.k)[:, 0]
+
+        return topk_per_row(latent, estimated_k)
 
 
 class JumpReLU(nn.Module):
@@ -270,7 +285,7 @@ ACTIVATIONS_CLASSES = {
 }
 
 
-def get_activation(activation: str) -> nn.Module:
+def get_activation(activation: str, n_inputs: int) -> nn.Module:
     """
     Factory function to create activation function instances by name.
     
@@ -286,6 +301,8 @@ def get_activation(activation: str) -> nn.Module:
     if "_" in activation:
         activation, arg = activation.split("_")
         if "TopK" in activation:
+            if "Adaptive" in activation:
+                return ACTIVATIONS_CLASSES[activation](k=int(arg), n_inputs=n_inputs)
             return ACTIVATIONS_CLASSES[activation](k=int(arg))
         elif "JumpReLU" in activation:
             return ACTIVATIONS_CLASSES[activation](hidden_dim=int(arg))
@@ -337,7 +354,7 @@ class Autoencoder(nn.Module):
         """
         super().__init__()
         if isinstance(activation, str):
-            activation = get_activation(activation)
+            activation = get_activation(activation, n_inputs)
         
         # Store configuration
         self.tied = tied
@@ -544,11 +561,13 @@ class Autoencoder(nn.Module):
         """
         x, info = self.preprocess(x)
         pre_encoded = self.encode_pre_act(x)
-        encoded = self.activation(pre_encoded)
+        encoded = self.activation(pre_encoded, x) if isinstance(self.activation, AdaptiveSoftTopK) else self.activation(pre_encoded) 
         
         # Get full activations (for analysis) depending on activation type
         if isinstance(self.activation, TopK):
             full_encoded = self.activation.forward_eval(pre_encoded)
+        elif isinstance(self.activation, AdaptiveSoftTopK):
+            full_encoded = self.activation.forward_eval(pre_encoded, x)
         else:
             full_encoded = torch.clone(encoded)
         
@@ -622,7 +641,7 @@ class Autoencoder(nn.Module):
         latents_pre_act = self.encode_pre_act(x_processed)
         
         # Apply activation function
-        latents = self.activation(latents_pre_act)
+        latents = self.activation(latents_pre_act, x_processed) if isinstance(self.activation, AdaptiveSoftTopK) else self.activation(latents_pre_act)
         latents_caped = self.latent_soft_cap(latents)
 
         # Decode to reconstruction
@@ -635,6 +654,11 @@ class Autoencoder(nn.Module):
         if isinstance(self.activation, TopK):
             # For TopK, return both sparse and full activations
             all_latents = self.activation.forward_eval(latents_pre_act)
+            all_latents_caped = self.latent_soft_cap(all_latents)
+            all_recons = self.decode(all_latents_caped, info)
+            return recons, latents_caped, all_recons, all_latents_caped
+        elif isinstance(self.activation, AdaptiveSoftTopK):
+            all_latents = self.activation.forward_eval(latents_pre_act, x)
             all_latents_caped = self.latent_soft_cap(all_latents)
             all_recons = self.decode(all_latents_caped, info)
             return recons, latents_caped, all_recons, all_latents_caped

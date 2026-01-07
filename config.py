@@ -161,6 +161,29 @@ class BatchTopKSAEConfig:
     loss: LossConfig = field(default_factory=default_batchtopksae_loss)
     model: ModelConfig = field(default_factory=default_batchtopksae_model)
 
+def default_softtopksae_training() -> TrainConfig:
+    return TrainConfig(lr=5e-4)
+
+def default_softtopksae_loss() -> LossConfig:
+    return LossConfig(sparse_weight=1.0)
+
+def default_softtopksae_model() -> ModelConfig:
+    return ModelConfig(use_matryoshka=False, activation="AdaptiveSoftTopK_1024")
+
+@dataclasses.dataclass
+class SoftTopKSAEConfig:
+    """
+    Configuration for Batch Top-K Sparse Autoencoder.
+    
+    Similar to TopKSAE but uses BatchTopKReLU_32 activation which performs top-k
+    selection across the batch dimension, potentially allowing more dynamic
+    sparsity patterns. Uses a higher learning rate (5e-4) and no explicit
+    sparsity weight.
+    """
+    training: TrainConfig = field(default_factory=default_softtopksae_training)
+    loss: LossConfig = field(default_factory=default_softtopksae_loss)
+    model: ModelConfig = field(default_factory=default_batchtopksae_model)
+
 def default_msae_uw_training() -> TrainConfig:
     return TrainConfig(lr=1e-4)
 
@@ -235,6 +258,8 @@ def get_config(model_name: str):
         return TopKSAEConfig()
     elif model_name == "BatchTopKSAE":
         return BatchTopKSAEConfig()
+    elif model_name == "SoftTopKSAE":
+        return SoftTopKSAEConfig()
     elif model_name == "MSAE_UW":
         return MSAE_UWConfig()
     elif model_name == "MSAE_RW":

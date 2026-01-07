@@ -1,5 +1,26 @@
 import torch
 
+def topk_per_row(x, v):
+    # x: (B, D)
+    # v: (B,)
+    _, D = x.shape
+
+    # sort each row descending
+    vals, idx = torch.sort(x, dim=1, descending=True)
+
+    # create a mask: True for positions < v[i]
+    arange = torch.arange(D, device=x.device)
+    mask = arange.unsqueeze(0) < v.unsqueeze(1)  # (B, D)
+
+    # zero out values beyond top v[i]
+    vals = vals * mask
+
+    # scatter back to original positions
+    out = torch.zeros_like(x)
+    out.scatter_(1, idx, vals)
+
+    return out
+
 class SoftTopK(torch.autograd.Function):
     @staticmethod
     def _solve(s, t, a, b, e):
@@ -49,7 +70,7 @@ class SoftTopK(torch.autograd.Function):
                 torch.where(i > 0, eB.gather(1, m), 0),
                 w - i,
             )
-            return b
+            return torch.clamp_max(b, 1e8)
 
         b = finding_b()
 
