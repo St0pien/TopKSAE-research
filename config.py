@@ -165,10 +165,10 @@ def default_softtopksae_training() -> TrainConfig:
     return TrainConfig(lr=5e-4)
 
 def default_softtopksae_loss() -> LossConfig:
-    return LossConfig(sparse_weight=1.0)
+    return LossConfig(sparse_weight=3.0)
 
 def default_softtopksae_model() -> ModelConfig:
-    return ModelConfig(use_matryoshka=False, activation="AdaptiveSoftTopK_1024")
+    return ModelConfig(use_matryoshka=False, activation="AdaptiveSoftTopK_128")
 
 @dataclasses.dataclass
 class SoftTopKSAEConfig:

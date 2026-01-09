@@ -192,7 +192,6 @@ class AdaptiveSoftTopK(nn.Module):
         self.k = k
         self.k_estim = nn.Sequential(
             nn.Linear(self.input_dim, 1),
-            nn.BatchNorm1d(1),
             nn.Sigmoid()
         )     
         self.act_fn = act_fn
