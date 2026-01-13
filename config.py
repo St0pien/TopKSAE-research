@@ -28,6 +28,7 @@ class TrainConfig:
         print_freq (int): Frequency (in iterations) to print training metrics.
         num_workers (int): Number of worker processes for data loading.
     """
+    train_k: bool = False
     lr: float = 0.001
     seed: int = 42
     dtype: Any = torch.float32
@@ -162,10 +163,10 @@ class BatchTopKSAEConfig:
     model: ModelConfig = field(default_factory=default_batchtopksae_model)
 
 def default_softtopksae_training() -> TrainConfig:
-    return TrainConfig(lr=5e-4)
+    return TrainConfig(train_k=True, lr=5e-4)
 
 def default_softtopksae_loss() -> LossConfig:
-    return LossConfig(sparse_weight=3.0)
+    return LossConfig()
 
 def default_softtopksae_model() -> ModelConfig:
     return ModelConfig(use_matryoshka=False, activation="AdaptiveSoftTopK_128")

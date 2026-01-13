@@ -196,8 +196,11 @@ class AdaptiveSoftTopK(nn.Module):
         )     
         self.act_fn = act_fn
 
+    def estimate_k(self, x: torch.Tensor):
+        return (self.k_estim(x) * self.k * 2)[:, 0]
+
     def forward(self, latent: torch.Tensor, embed: torch.Tensor):
-        estimated_k = (self.k_estim(embed) * self.k)[:, 0]
+        estimated_k = self.estimate_k(embed)
         weights = SoftTopK.apply(latent, estimated_k, 0.001, False, True)
         if torch.isnan(weights).any():
             raise Exception("Numerical error")

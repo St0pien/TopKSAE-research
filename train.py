@@ -8,8 +8,8 @@ from dataclasses import asdict
 from metrics import calculate_similarity_metrics, identify_dead_neurons, orthogonal_decoder, cknna, explained_variance
 from utils import SAEDataset, set_seed, get_device, geometric_median, calculate_vector_mean, LinearDecayLR, CosineWarmupScheduler
 from config import get_config
-from sae import Autoencoder, MatryoshkaAutoencoder
-from loss import SAELoss
+from sae import Autoencoder, MatryoshkaAutoencoder, AdaptiveSoftTopK
+from loss import SAELoss, KLoss
 
 """
 Sparse Autoencoder (SAE) Training Script
@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-dm", "--dataset_second_modality", type=str, default=None,
                        help="Path to second modality dataset file (.npy)")
     parser.add_argument("-m", "--model", type=str, required=True, 
-                       choices=["ReLUSAE", "TopKSAE", "BatchTopKSAE", "MSAE_UW", "MSAE_RW"], 
+                       choices=["ReLUSAE", "TopKSAE", "BatchTopKSAE", "SoftTopKSAE", "MSAE_UW", "MSAE_RW"], 
                        help="Model architecture to train")
     parser.add_argument("-a", "--activation", type=str, required=True, 
                        help="Activation function (e.g., 'ReLU_003', 'TopKReLU_64')")
@@ -278,6 +278,8 @@ def main(args):
         sparse_weight=cfg.loss.sparse_weight,
         mean_input=mean_input,
     )
+
+    k_loss = KLoss(model.activation.k) if cfg.training.train_k else None
     
     # Prepare the optimizer with adaptive settings based on device
     fused_available = "fused" in inspect.signature(torch.optim.AdamW).parameters
@@ -368,6 +370,11 @@ def main(args):
             else:
                 # Standard SAE loss computation
                 loss, recon_loss, sparse_loss = loss_fn(recons_sparse, embeddings, repr_sparse)
+            
+            if cfg.training.train_k:
+                estimated_ks = model.activation.estimate_k(embeddings)
+                k_loss_val = k_loss.forward(estimated_ks)
+                loss += k_loss_val
             
             # Backpropagation
             loss.backward()

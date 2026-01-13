@@ -252,3 +252,14 @@ def get_sparse_loss_fn(sparse_loss: str) -> callable:
         return partial(SPARSITY_LOSSES_MAP[sparse_loss], scale=float(scale), saturation=float(saturation))
     
     return SPARSITY_LOSSES_MAP[sparse_loss]
+
+
+class KLoss(torch.nn.Module):
+    def __init__(self, target_k):
+        super().__init__()
+        self.target_k = target_k
+
+    
+    def forward(self, k: torch.Tensor):
+        over_budget = torch.clamp_min(k.sum()  - self.target_k * k.shape[0], 0)
+        return over_budget**2
